@@ -1,4 +1,7 @@
 import os
+
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
+
 import json
 import time
 import argparse
@@ -29,7 +32,7 @@ parser.add_argument('--exp_name',
 parser.add_argument('--mode',
                     '-m',
                     type=str,
-                    default='preprocessing',
+                    default='train',
                     help='preprocessing|train|evaluation')
 args = parser.parse_args()
 
@@ -58,7 +61,7 @@ class Runner(object):
         return m[name]
 
     def _init_model(self):
-        self.model = MultiHeadSelection(self.hyper).cuda(self.gpu)
+        self.model = MultiHeadSelection(self.hyper).cuda(self.gpu) if torch.cuda.is_available() else MultiHeadSelection(self.hyper)
 
     def preprocessing(self):
         if self.exp_name == 'conll_selection_re':
