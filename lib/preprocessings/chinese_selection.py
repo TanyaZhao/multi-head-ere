@@ -5,7 +5,7 @@ import numpy as np
 from collections import Counter
 from typing import Dict, List, Tuple, Set, Optional
 
-from cached_property import cached_property
+# from cached_property import cached_property
 
 
 class Chinese_selection_preprocessing(object):
@@ -24,7 +24,7 @@ class Chinese_selection_preprocessing(object):
         self.relation_vocab_path = os.path.join(self.data_root,
                                                 hyper.relation_vocab)
 
-    @cached_property
+    # @cached_property
     def relation_vocab(self):
         if os.path.exists(self.relation_vocab_path):
             pass

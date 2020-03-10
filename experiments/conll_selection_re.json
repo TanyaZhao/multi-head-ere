@@ -3,6 +3,7 @@
     "model": "multi_head_selection",
     "data_root": "data/conll/multi_head_selection",
     "raw_data_root": "raw_data/CoNLL04",
+    "pre_trained_word_emb": "raw_data/word_embed/glove.6B.300d.txt",
     "train": "train.txt",
     "dev": "test.txt",
     "relation_vocab": "relation_vocab.json",
@@ -12,13 +13,17 @@
     "cell_name": "lstm",
     "emb_size": 300,
     "rel_emb_size": 100,
-    "bio_emb_size": 50,
+    "bio_emb_size": 25,
     "hidden_size": 300,
+    "use_dropout": 1,
     "threshold": 0.5,
+    "dropout_rnn": 0.9,
+    "dropout_prob": 0.9,
+    "dropout_emb": 0.9,
     "activation": "tanh",
     "optimizer": "adam",
     "epoch_num": 150,
     "train_batch": 16,
     "eval_batch": 32,
-    "gpu":3
+    "gpu":0
 }

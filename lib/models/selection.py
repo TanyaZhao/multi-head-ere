@@ -1,3 +1,4 @@
+#coding=utf-8
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,8 +11,10 @@ from typing import Dict, List, Tuple, Set, Optional
 from functools import partial
 
 # from torch_crf import CRF
-from TorchCRF import CRF
+# from TorchCRF import CRF
+from torchcrf import CRF
 from pytorch_transformers import *
+from lib.preprocessings.conll_selection import load_prebuilt_word_embedding, load_prebuilt_word_vocab
 
 
 class MultiHeadSelection(nn.Module):
@@ -41,6 +44,24 @@ class MultiHeadSelection(nn.Module):
         self.bio_emb = nn.Embedding(num_embeddings=len(self.bio_vocab),
                                     embedding_dim=hyper.bio_emb_size)
 
+        if hyper.pre_trained_word_emb != "" and hyper.cell_name != "bert":
+            import numpy as np
+            self.word_vocab = load_prebuilt_word_vocab(self.word_vocab, hyper.pre_trained_word_emb, 300)
+
+            pre_word_embeds = load_prebuilt_word_embedding(hyper.pre_trained_word_emb, 300)
+            word_embeds = np.random.uniform(-np.sqrt(6 / 300), np.sqrt(6 / 300),
+                                            (len(self.word_vocab), 300))  # Kaiming_uniform
+            for w in self.word_vocab.keys():
+                if w in pre_word_embeds.keys():
+                    word_embeds[self.word_vocab[w], :] = pre_word_embeds[w]
+                elif w.lower() in pre_word_embeds.keys():
+                    word_embeds[self.word_vocab[w], :] = pre_word_embeds[w.lower()]
+
+            self.word_embeddings = nn.Embedding(num_embeddings=len(
+                self.word_vocab),
+                embedding_dim=hyper.emb_size)
+            self.word_embeddings.weight = nn.Parameter(torch.FloatTensor(word_embeds))
+
         if hyper.cell_name == 'gru':
             self.encoder = nn.GRU(hyper.emb_size,
                                   hyper.hidden_size,
@@ -56,7 +77,7 @@ class MultiHeadSelection(nn.Module):
                                    hyper.hidden_size,
                                    bidirectional=True,
                                    batch_first=True)
-            self.encoder = BertModel.from_pretrained('bert-base-uncased')
+            self.encoder = BertModel.from_pretrained('pretrained_bert/bert-base-uncased')
             for name, param in self.encoder.named_parameters():
                 if '11' in name:
                     param.requires_grad = True
@@ -73,24 +94,25 @@ class MultiHeadSelection(nn.Module):
         else:
             raise ValueError('unexpected activation!')
 
-        self.tagger = CRF(len(self.bio_vocab) - 1, batch_first=True)
+        # self.tagger = CRF(len(self.bio_vocab) - 1, batch_first=True)
 
-        self.selection_u = nn.Linear(hyper.hidden_size + hyper.bio_emb_size,
+        self.crf_tagger = CRF(len(self.bio_vocab) - 1, batch_first=True)
+
+        self.selection_u = nn.Linear(2*hyper.hidden_size + hyper.bio_emb_size,
                                      hyper.rel_emb_size)
-        self.selection_v = nn.Linear(hyper.hidden_size + hyper.bio_emb_size,
+        self.selection_v = nn.Linear(2*hyper.hidden_size + hyper.bio_emb_size,
                                      hyper.rel_emb_size)
         self.selection_uv = nn.Linear(2 * hyper.rel_emb_size,
                                       hyper.rel_emb_size)
-        self.emission = nn.Linear(hyper.hidden_size, len(self.bio_vocab) - 1)
+        self.hidden2tag = nn.Linear(2*hyper.hidden_size, len(self.bio_vocab) - 1)
 
-        self.bert2hidden = nn.Linear(768, hyper.hidden_size)
+        self.bert2hidden = nn.Linear(768, 2*hyper.hidden_size)
         # for bert_lstm
         # self.bert2hidden = nn.Linear(768, hyper.emb_size)
 
         if self.hyper.cell_name == 'bert':
-
             self.bert_tokenizer = BertTokenizer.from_pretrained(
-                'bert-base-uncased')
+                'pretrained_bert/bert-base-uncased')
 
         # self.accuracy = F1Selection()
 
@@ -120,7 +142,7 @@ class MultiHeadSelection(nn.Module):
 
     @staticmethod
     def description(epoch, epoch_num, output):
-        return "L: {:.2f}, L_crf: {:.2f}, L_selection: {:.2f}, epoch: {}/{}:".format(
+        return "loss: {:.4f}, crf_loss: {:.4f}, selection_loss: {:.4f}, epoch: {}/{}:".format(
             output['loss'].item(), output['crf_loss'].item(),
             output['selection_loss'].item(), epoch, epoch_num)
 
@@ -151,9 +173,9 @@ class MultiHeadSelection(nn.Module):
             embedded = self.word_embeddings(tokens)
             o, h = self.encoder(embedded)
 
-            o = (lambda a: sum(a) / 2)(torch.split(o,
-                                                   self.hyper.hidden_size,
-                                                   dim=2))
+            # o = (lambda a: sum(a) / 2)(torch.split(o,
+            #                                        self.hyper.hidden_size,
+            #                                        dim=2))
         elif self.hyper.cell_name == 'bert':
             # with torch.no_grad():
             o = self.encoder(tokens, attention_mask=mask)[
@@ -170,17 +192,19 @@ class MultiHeadSelection(nn.Module):
             #                                        dim=2))
         else:
             raise ValueError('unexpected encoder name!')
-        emi = self.emission(o)
+        emi = self.hidden2tag(o)
 
         output = {}
 
         crf_loss = 0
 
         if is_train:
-            crf_loss = -self.tagger(emi, bio_gold,
-                                    mask=bio_mask, reduction='mean')
+            # crf_loss = -self.crf_tagger(emi, bio_gold,
+            #                         mask=bio_mask, reduction='mean')
+            crf_loss = -self.crf_tagger(emi, bio_gold,
+                                        mask=bio_mask, reduction='mean')
         else:
-            decoded_tag = self.tagger.decode(emissions=emi, mask=bio_mask)
+            decoded_tag = self.crf_tagger.decode(emissions=emi, mask=bio_mask)
 
             output['decoded_tag'] = [list(map(lambda x : self.id2bio[x], tags)) for tags in decoded_tag]
             output['gold_tags'] = bio_text

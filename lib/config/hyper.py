@@ -9,6 +9,7 @@ class Hyper(object):
         self.model: str
         self.data_root: str
         self.raw_data_root: str
+        self.pre_trained_word_emb: str
         self.train: str
         self.dev: str
         self.relation_vocab: str
@@ -20,6 +21,9 @@ class Hyper(object):
         self.rel_emb_size: int
         self.hidden_size: int
         self.threshold: float
+        self.dropout_rnn: float
+        self.dropout_prob: float
+        self.dropout_emb: float
         self.activation: str
         self.optimizer: str
         self.epoch_num: int

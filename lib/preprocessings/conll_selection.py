@@ -23,6 +23,8 @@ class Conll_selection_preprocessing(object):
 
         self._one_pass_train()
 
+        # self.load_prebuilt_word_embedding(hyper.pre_trained_word_emb, 300)
+
     def _one_pass_train(self):
         # prepare for word_vocab, relation_vocab
         train_path = os.path.join(self.raw_data_root, self.hyper.train)
@@ -98,6 +100,31 @@ class Conll_selection_preprocessing(object):
                 result = {'text': sent, 'spo_list': triplets,
                           'bio': bio, 'selection': selection_dics}
                 t.write(json.dumps(result))
+
+    def load_prebuilt_word_embedding(self, embedding_path, embedding_dim, kept_words=set()):
+
+        lower_kept_words = set([w.lower() for w in kept_words])
+
+        if embedding_path is not None and len(embedding_path) > 0:
+            count = 0
+            for line in open(embedding_path, "r").readlines():
+                count += 1
+                if count % 1000 == 0:
+                    print("\tRead {0} lines".format(count))
+
+                line = line.strip()
+                if not line or len(line) < embedding_dim:
+                    continue
+                else:
+                    word_embedding = line.strip().split(" ")
+                    if len(word_embedding) != 1 + embedding_dim:
+                        continue
+                    word = word_embedding[0]
+                    # if word not in self.word_vocab.keys():
+                    #    self.word_vocab[word]=len(self.word_vocab)
+                    # embedding = [float(val) for val in word_embedding[1:]]
+                    self.word_vocab.update(word)
+
 
     def gen_all_data(self):
         self._gen_one_data(self.hyper.train)
@@ -178,3 +205,63 @@ class Conll_selection_preprocessing(object):
                 if t.endswith(']'):
                     cur = e
             return a, b, c, ''.join(d), ''.join(e)
+
+
+def load_prebuilt_word_embedding(embedding_path, embedding_dim, kept_words=set()):
+
+    word_embedding_dict = dict()
+    lower_kept_words = set([w.lower() for w in kept_words])
+
+    if embedding_path is not None and len(embedding_path) > 0:
+        count = 0
+        for line in open(embedding_path, "r").readlines():
+            count += 1
+            if count % 1000 == 0:
+                print("\tRead {0} lines".format(count))
+
+            line = line.strip()
+            if not line or len(line) < embedding_dim:
+                continue
+            else:
+                word_embedding = line.strip().split(" ")
+                if len(word_embedding) != 1 + embedding_dim:
+                    continue
+                word = word_embedding[0]
+                embedding = [float(val) for val in word_embedding[1:]]
+                if word in word_embedding_dict.keys() or (len(kept_words) > 0 and not (word in kept_words) and not (
+                    word.lower() in lower_kept_words)):
+                    continue
+                else:
+                    word_embedding_dict[word] = embedding
+
+    return word_embedding_dict
+
+def load_prebuilt_word_vocab(word_vocab_counter, embedding_path, embedding_dim, kept_words=set()):
+
+    # word_embedding_dict = dict()
+
+    word_vocab = dict()
+    for word in word_vocab_counter.keys():
+        word_vocab[word] = len(word_vocab)
+
+    lower_kept_words = set([w.lower() for w in kept_words])
+
+    if embedding_path is not None and len(embedding_path) > 0:
+        count = 0
+        for line in open(embedding_path, "r").readlines():
+            count += 1
+            if count % 1000 == 0:
+                print("\tRead {0} lines".format(count))
+
+            line = line.strip()
+            if not line or len(line) < embedding_dim:
+                continue
+            else:
+                word_embedding = line.strip().split(" ")
+                if len(word_embedding) != 1 + embedding_dim:
+                    continue
+                word = word_embedding[0]
+                if word not in word_vocab.keys():
+                    word_vocab[word] = len(word)
+
+    return word_vocab

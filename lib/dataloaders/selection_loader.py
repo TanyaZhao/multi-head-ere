@@ -33,7 +33,9 @@ class Selection_Dataset(Dataset):
 
         # for bert only
         self.bert_tokenizer = BertTokenizer.from_pretrained(
-            'bert-base-uncased')
+            'pretrained_bert/bert-base-uncased')
+        # self.bert_tokenizer = BertTokenizer.from_pretrained(
+        #     'bert-base-uncased')
 
         for line in open(os.path.join(self.data_root, dataset), 'r'):
             line = line.strip("\n")
