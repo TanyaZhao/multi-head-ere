@@ -24,7 +24,7 @@ class Conll_bert_preprocessing(object):
         self.relation_vocab_dict = None
 
         self.bert_tokenizer = BertTokenizer.from_pretrained(
-            '../multi-turn-relation-extraction/pretrained_bert/bert_base_cased')
+            '../multi-turn-relation-extraction/pretrained_bert/bert-base-cased')
 
         self._one_pass_train()
 

@@ -202,9 +202,15 @@ class MultiHeadSelection(nn.Module):
             # crf_loss = -self.crf_tagger(emi, bio_gold,
             #                             mask=bio_mask, reduction='mean')
             loss_fct = nn.CrossEntropyLoss(ignore_index=0)
-            crf_loss = loss_fct(emi.view(-1, self.num_labels), bio_gold.view(-1))
+            crf_loss = loss_fct(emi.view(-1, len(self.bio_vocab) - 1), bio_gold.view(-1))
 
         else:
+            import numpy as np
+
+            logits = F.log_softmax(emi, dim=2)  # batch, max_seq_len, n_class
+            logits = logits.detach().cpu().numpy()
+            decoded_tag1 = np.argmax(logits, axis=-1).tolist() # batch, max_seq_le
+
             decoded_tag = self.crf_tagger.decode(emissions=emi, mask=bio_mask)
 
             output['decoded_tag'] = [list(map(lambda x : self.id2bio[x], tags)) for tags in decoded_tag]
