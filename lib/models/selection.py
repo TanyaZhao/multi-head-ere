@@ -112,7 +112,7 @@ class MultiHeadSelection(nn.Module):
 
         if self.hyper.cell_name == 'bert':
             self.bert_tokenizer = BertTokenizer.from_pretrained(
-                'pretrained_bert/bert-base-uncased')
+                '../multi-turn-relation-extraction/pretrained_bert/bert-base-cased')
 
         # self.accuracy = F1Selection()
 
