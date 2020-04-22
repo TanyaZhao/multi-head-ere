@@ -33,7 +33,7 @@ class Selection_Dataset(Dataset):
 
         # for bert only
         self.bert_tokenizer = BertTokenizer.from_pretrained(
-            'pretrained_bert/bert-base-uncased')
+            '../multi-turn-relation-extraction/pretrained_bert/bert-base-cased')
         # self.bert_tokenizer = BertTokenizer.from_pretrained(
         #     'bert-base-uncased')
 

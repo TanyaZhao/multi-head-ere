@@ -77,7 +77,7 @@ class MultiHeadSelection(nn.Module):
                                    hyper.hidden_size,
                                    bidirectional=True,
                                    batch_first=True)
-            self.encoder = BertModel.from_pretrained('pretrained_bert/bert-base-uncased')
+            self.encoder = BertModel.from_pretrained('../multi-turn-relation-extraction/pretrained_bert/bert-base-cased')
             for name, param in self.encoder.named_parameters():
                 if '11' in name:
                     param.requires_grad = True
@@ -200,9 +200,10 @@ class MultiHeadSelection(nn.Module):
 
         if is_train:
             # crf_loss = -self.crf_tagger(emi, bio_gold,
-            #                         mask=bio_mask, reduction='mean')
-            crf_loss = -self.crf_tagger(emi, bio_gold,
-                                        mask=bio_mask, reduction='mean')
+            #                             mask=bio_mask, reduction='mean')
+            loss_fct = nn.CrossEntropyLoss(ignore_index=0)
+            crf_loss = loss_fct(emi.view(-1, self.num_labels), bio_gold.view(-1))
+
         else:
             decoded_tag = self.crf_tagger.decode(emissions=emi, mask=bio_mask)
 
